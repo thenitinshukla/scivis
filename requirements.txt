@@ -1,0 +1,18 @@
+PyQt5>=5.15
+h5py>=3.8
+numpy>=1.23
+matplotlib>=3.6
+scipy>=1.9   # optional but recommended: enables Gaussian/moving-average smoothing
+PyVista>=0.43  # optional runtime dependency for 3D rendering
+PyVistaQt>=0.11  # optional Qt integration for the 3D viewer
+# Optional machine-learning features
+scikit-learn>=1.3
+Pillow>=9.5
+# Optional bundled ffmpeg support for MP4 animation export
+imageio>=2.31
+imageio-ffmpeg>=0.4.9
+
+# Optional fast movie encoding / image processing
+opencv-python>=4.8
+# Optional GPU-backed interactive 2D rendering
+vispy>=0.14

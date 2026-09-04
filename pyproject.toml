@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scientific-simulation-platform"
+version = "0.1.0"
+dependencies = [
+    "PyQt5>=5.15",
+    "h5py>=3.8",
+    "numpy>=1.23",
+    "matplotlib>=3.6",
+    "scipy>=1.9",
+]
+
+[project.optional-dependencies]
+performance = ["opencv-python>=4.8", "vispy>=0.14", "PyVista>=0.43", "PyVistaQt>=0.11"]
+
+[tool.setuptools.packages.find]
+include = ["scientific_visualization*"]

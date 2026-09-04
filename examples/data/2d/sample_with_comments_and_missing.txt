@@ -1,0 +1,7 @@
+# comments are ignored
+# x y
+0 0
+1 1
+2 nan
+3 bad
+4 16

@@ -430,25 +430,6 @@ Planned:
 
 The application should remain useful after every phase, with a stable build and test suite after each increment.
 
-## Git workflow
-
-A normal Git workflow is:
-
-```bash
-git init
-git add .
-git commit -m "Initial scientific visualization platform"
-```
-
-Then create a remote repository and push:
-
-```bash
-git branch -M main
-git remote add origin <your-repository-url>
-git push -u origin main
-```
-
-Do not commit virtual environments, build output, IDE metadata, or generated large simulation data. The repository already contains a `.gitignore`; review it before the first push.
 
 ## License
 

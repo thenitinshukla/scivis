@@ -1,7 +1,8 @@
 <div align="center"> <img src="figures/logo.jpg" alt="SciVis Logo" width="180"/>
-SciVis
 
-Scientific Simulation Visualization Platform
+
+SciVis: Scientific Simulation Visualization Platform
+
 A modular Python/PyQt5 desktop application for scientific simulation visualization, data inspection, analysis, machine-learning workflows, and publication-oriented plotting.
 
 </div>

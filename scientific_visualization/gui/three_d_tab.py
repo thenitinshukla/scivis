@@ -83,7 +83,85 @@ class ThreeDTab(BaseTab):
             vbox.addWidget(msg, 1)
         return container
 
+    # Curated look bundles: opinionated combinations of colormap, opacity,
+    # lighting, and post-processing that are picked to look good together,
+    # rather than making the user assemble a look from ~15 independent
+    # checkboxes with no starting point. Each still just sets the ordinary
+    # widgets below, so nothing about the render pipeline is special-cased.
+    STYLE_PRESETS = {
+        "\U0001f52c Scientific": dict(
+            cmap="viridis", reverse_colors=False, opacity=1.0, smooth_shading=True,
+            show_edges=False, lighting=True, eye_dome_lighting=False, depth_peeling=False,
+            ssao=False, antialiasing=True, render_quality="Balanced",
+        ),
+        "\U0001f3ac Cinematic": dict(
+            cmap="turbo", reverse_colors=False, opacity=0.92, smooth_shading=True,
+            show_edges=False, lighting=True, eye_dome_lighting=True, depth_peeling=True,
+            ssao=True, antialiasing=True, render_quality="High",
+        ),
+        "\U0001fa7b X-ray": dict(
+            cmap="bone", reverse_colors=True, opacity=0.30, smooth_shading=False,
+            show_edges=True, lighting=False, eye_dome_lighting=True, depth_peeling=True,
+            ssao=False, antialiasing=True, render_quality="Balanced",
+        ),
+        "\u2728 Neon glow": dict(
+            cmap="plasma", reverse_colors=False, opacity=0.85, smooth_shading=True,
+            show_edges=False, lighting=False, eye_dome_lighting=True, depth_peeling=False,
+            ssao=False, antialiasing=True, render_quality="High",
+        ),
+        "\u26aa Monochrome": dict(
+            cmap="gray", reverse_colors=False, opacity=1.0, smooth_shading=True,
+            show_edges=True, lighting=True, eye_dome_lighting=False, depth_peeling=False,
+            ssao=False, antialiasing=True, render_quality="Balanced",
+        ),
+    }
+
+    def _apply_style_preset(self, name: str):
+        preset = self.STYLE_PRESETS.get(name)
+        if preset is None:
+            return
+        self.cmap.setCurrentText(preset["cmap"])
+        self.reverse_colors.setChecked(preset["reverse_colors"])
+        self.opacity.setValue(preset["opacity"])
+        self.smooth_shading.setChecked(preset["smooth_shading"])
+        self.show_edges.setChecked(preset["show_edges"])
+        self.lighting.setChecked(preset["lighting"])
+        self.eye_dome_lighting.setChecked(preset["eye_dome_lighting"])
+        self.depth_peeling.setChecked(preset["depth_peeling"])
+        self.ssao.setChecked(preset["ssao"])
+        self.antialiasing.setChecked(preset["antialiasing"])
+        self.render_quality.setCurrentText(preset["render_quality"])
+        self.style_hint.setText(f"Style: {name}")
+        # Instant gratification: if something is already on screen, show the
+        # new look immediately rather than making the user hunt for Render.
+        if self.dataset is not None:
+            self.render(clear_scene=True)
+
+    def _surprise_me(self):
+        import random
+        self._apply_style_preset(random.choice(list(self.STYLE_PRESETS)))
+
     def _build_controls(self):
+        style_box = QGroupBox("\U0001f3a8 Look")
+        style_layout = QVBoxLayout(style_box)
+        style_grid = QHBoxLayout()
+        for name in self.STYLE_PRESETS:
+            btn = QPushButton(name)
+            btn.setToolTip(f"Apply the {name.split(' ', 1)[-1]} look (colormap, lighting, opacity, quality).")
+            btn.clicked.connect(lambda _checked=False, n=name: self._apply_style_preset(n))
+            style_grid.addWidget(btn)
+        style_layout.addLayout(style_grid)
+        surprise_row = QHBoxLayout()
+        surprise_btn = QPushButton("\U0001f3b2 Surprise me")
+        surprise_btn.setToolTip("Try a random curated look.")
+        surprise_btn.clicked.connect(self._surprise_me)
+        surprise_row.addWidget(surprise_btn)
+        self.style_hint = QLabel("Pick a look, or fine-tune everything below.")
+        self.style_hint.setWordWrap(True)
+        surprise_row.addWidget(self.style_hint, 1)
+        style_layout.addLayout(surprise_row)
+        self.control_layout.addWidget(style_box)
+
         controls = QGroupBox("3D visualization")
         form = QFormLayout(controls)
         file_buttons = QHBoxLayout()
@@ -159,7 +237,7 @@ class ThreeDTab(BaseTab):
 
         self.opacity = QDoubleSpinBox(); self.opacity.setRange(0.05,1.0); self.opacity.setSingleStep(0.05); self.opacity.setValue(1.0)
         form.addRow("Opacity:", self.opacity)
-        self.cmap = QComboBox(); self.cmap.addItems(["viridis","plasma","inferno","magma","cividis","turbo","coolwarm","RdBu_r","twilight","gray"])
+        self.cmap = QComboBox(); self.cmap.addItems(["viridis","plasma","inferno","magma","cividis","turbo","coolwarm","RdBu_r","twilight","gray","bone","hot","ocean","terrain"])
         form.addRow("Colormap:", self.cmap)
         self.reverse_colors = QCheckBox("Reverse colormap"); form.addRow(self.reverse_colors)
         self.symmetric = QCheckBox("Symmetric color limits"); self.symmetric.setChecked(False); form.addRow(self.symmetric)
@@ -272,6 +350,20 @@ class ThreeDTab(BaseTab):
         self.file_list.addItems([Path(f).name for f in files])
         self.file_list.setCurrentRow(0)
 
+    _TWO_D_MODES = ("2D plane", "2D surface", "2D extrusion")
+    _THREE_D_MODES = ("3D orthogonal slices", "3D single slice", "3D volume", "3D isosurfaces",
+                       "3D threshold", "3D clip plane", "3D box clip")
+
+    def _default_mode_for_ndim(self, ndim):
+        return "3D orthogonal slices" if ndim == 3 else "2D plane"
+
+    def _mode_valid_for_ndim(self, mode, ndim):
+        if ndim == 2:
+            return mode in self._TWO_D_MODES
+        if ndim == 3:
+            return mode in self._THREE_D_MODES
+        return False
+
     def apply_selection(self):
         row = self.file_list.currentRow() if self.file_list is not None else -1
         if not (0 <= row < len(self._pending_files)):
@@ -294,11 +386,20 @@ class ThreeDTab(BaseTab):
                     lo, hi = float(finite.min()), float(finite.max())
                     self.threshold_min.setRange(lo, hi); self.threshold_max.setRange(lo, hi)
                     self.threshold_min.setValue(lo + 0.20 * (hi - lo)); self.threshold_max.setValue(lo + 0.80 * (hi - lo))
-                self.mode.blockSignals(True); self.mode.setCurrentText("3D orthogonal slices"); self.mode.blockSignals(False)
-                self._update_mode_controls(self.mode.currentText())
-            elif self.dataset.ndim == 2:
-                self.mode.blockSignals(True); self.mode.setCurrentText("2D plane"); self.mode.blockSignals(False)
-                self._update_mode_controls(self.mode.currentText())
+            # The previously chosen mode (e.g. "3D isosurfaces") is only
+            # reset when it's no longer valid for the newly loaded dataset's
+            # dimensionality (switching between a 2D and a 3D file). Loading
+            # another file of the *same* dimensionality -- including paging
+            # through frames of a time series with Previous/Next frame --
+            # must not silently throw away an isosurface/threshold/clip
+            # choice back to the orthogonal-slices default; that was making
+            # every mode except orthogonal slices effectively unusable in
+            # any multi-file workflow.
+            if self.dataset.ndim in (2, 3) and not self._mode_valid_for_ndim(self.mode.currentText(), self.dataset.ndim):
+                self.mode.blockSignals(True)
+                self.mode.setCurrentText(self._default_mode_for_ndim(self.dataset.ndim))
+                self.mode.blockSignals(False)
+            self._update_mode_controls(self.mode.currentText())
             self.prev_frame_btn.setEnabled(self.file_list.currentRow() > 0)
             self.next_frame_btn.setEnabled(self.file_list.currentRow() < len(self.files) - 1)
             self.render()

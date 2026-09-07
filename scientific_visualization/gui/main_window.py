@@ -9,6 +9,7 @@ from .ml_tab import MLTab
 from .ai_tab import AITab
 from .surrogate_tab import SurrogateTab
 from .data_plotter_tab import DataPlotterTab
+from .workspace_tab import WorkspaceTab
 
 
 class MainWindow(QMainWindow):
@@ -49,6 +50,8 @@ class MainWindow(QMainWindow):
         self.ai_tab = AITab()
         self.surrogate_tab = SurrogateTab()
         self.data_plotter_tab = DataPlotterTab()
+        self.workspace_tab = WorkspaceTab()
+        self.workspace_tab.send_to_data_plotter.connect(self.data_plotter_tab.add_dataset)
         self.grid_tab.dataset_changed.connect(self.ai_tab.set_dataset)
         self.grid_tab.open_in_3d_requested.connect(self.open_file_in_3d)
         self.three_d_tab.open_in_2d_requested.connect(self.open_file_in_2d)
@@ -61,6 +64,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.ai_tab, "AI Analysis")
         self.tabs.addTab(self.surrogate_tab, "Surrogate Lab")
         self.tabs.addTab(self.data_plotter_tab, "Data Plotter")
+        self.tabs.addTab(self.workspace_tab, "Data Workspace")
         self.setCentralWidget(self.tabs)
 
         self.set_theme("Light")

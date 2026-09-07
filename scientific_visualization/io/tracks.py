@@ -23,7 +23,7 @@ from typing import Optional
 import h5py
 import numpy as np
 
-from .grid import _attr, _scalar_attr
+from .grid import _attr, _scalar_attr, open_h5
 from ..core.data import Dataset
 
 
@@ -42,9 +42,10 @@ class TracksFile:
     _data: Optional[np.ndarray] = None      # cached full data array
 
     @classmethod
-    def info(cls, filename: str) -> "TracksFile":
-        tf = cls(filename=filename)
-        with h5py.File(filename, "r") as f:
+    def info(cls, filename) -> "TracksFile":
+        """`filename` may be a path or an already-open h5py.File/Group."""
+        with open_h5(filename) as f:
+            tf = cls(filename=f.filename)
             root = f["/"]
             tf.name = _attr(root, "NAME", "")
             tf.ndump = _scalar_attr(root, "NDUMP", 0, int)
@@ -126,9 +127,10 @@ class TracksFile:
         )
 
 
-def is_tracks_file(filename: str) -> bool:
+def is_tracks_file(filename) -> bool:
+    """`filename` may be a path or an already-open h5py.File/Group."""
     try:
-        with h5py.File(filename, "r") as f:
+        with open_h5(filename) as f:
             root = f["/"]
             return "data" in root and ("itermap" in root or "NTRACKS" in root.attrs)
     except Exception:

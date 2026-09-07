@@ -2,7 +2,7 @@ PyQt5>=5.15
 h5py>=3.8
 numpy>=1.23
 matplotlib>=3.6
-scipy>=1.9   # optional but recommended: enables Gaussian/moving-average smoothing
+scipy>=1.9   # optional but recommended: enables Gaussian/moving-average smoothing and custom (nonlinear) curve fits in the Data Plotter
 PyVista>=0.43  # optional runtime dependency for 3D rendering
 PyVistaQt>=0.11  # optional Qt integration for the 3D viewer
 # Optional machine-learning features
@@ -16,3 +16,8 @@ imageio-ffmpeg>=0.4.9
 opencv-python>=4.8
 # Optional GPU-backed interactive 2D rendering
 vispy>=0.14
+
+# Data Workspace (Import/Profile/Clean/Transform/Analyze/Visualize tab)
+pandas>=2.2
+openpyxl>=3.1     # optional: enables .xlsx/.xls import
+pyarrow>=14        # optional: enables .parquet import

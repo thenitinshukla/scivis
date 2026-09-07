@@ -20,7 +20,7 @@ from typing import Optional
 import h5py
 import numpy as np
 
-from .grid import _attr, _scalar_attr
+from .grid import _attr, _scalar_attr, open_h5
 from ..core.data import Dataset
 
 
@@ -37,9 +37,10 @@ class ParticleFile:
     _data: dict = field(default_factory=dict)
 
     @classmethod
-    def info(cls, filename: str) -> "ParticleFile":
-        pf = cls(filename=filename)
-        with h5py.File(filename, "r") as f:
+    def info(cls, filename) -> "ParticleFile":
+        """`filename` may be a path or an already-open h5py.File/Group."""
+        with open_h5(filename) as f:
+            pf = cls(filename=f.filename)
             root = f["/"]
             pf.name = _attr(root, "NAME", "")
             pf.time = _scalar_attr(root, "TIME", 0.0, float)
@@ -96,12 +97,22 @@ class ParticleFile:
         )
 
 
-def is_particle_file(filename: str) -> bool:
+def is_particle_file(filename) -> bool:
+    """`filename` may be a path or an already-open h5py.File/Group."""
     try:
-        with h5py.File(filename, "r") as f:
+        with open_h5(filename) as f:
             if "AXIS" in f:
                 return False
             root = f["/"]
+            # Tracks files also carry a QUANTS attribute (see tracks.py), but
+            # store every quantity as one column of a single concatenated
+            # `data` array rather than as its own top-level dataset. Without
+            # this check, any well-formed tracks file gets misidentified as
+            # a particle file (both are "flat, no-AXIS, has-QUANTS" HDF5
+            # files) and later fails with a KeyError when a caller asks for
+            # a quantity that only exists as a `data` column, e.g. 't'.
+            if "data" in root and ("itermap" in root or "NTRACKS" in root.attrs):
+                return False
             quants = _attr(root, "QUANTS", None)
             if quants:
                 return True

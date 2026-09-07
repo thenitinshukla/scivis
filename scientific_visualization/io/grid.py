@@ -18,6 +18,7 @@ group; both are checked, dataset-level attributes win.
 from __future__ import annotations
 
 import os
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -25,6 +26,35 @@ import h5py
 import numpy as np
 
 from ..core.data import CoordinateAxis, Dataset
+
+
+@contextmanager
+def open_h5(source):
+    """Yield an open h5py.File for `source`.
+
+    `source` may be a path (str/Path) or an already-open h5py.File/Group.
+    Simulation files typically get inspected once to figure out what kind
+    of file they are (``is_grid_file`` / ``is_particle_file`` /
+    ``is_tracks_file``) and then opened again to actually load them. When
+    `source` is already an open handle (as `SimulationReader` passes once
+    it has classified a file), that handle is reused as-is and left open
+    on exit -- only handles this function opens itself get closed. That
+    turns "classify, then load" from two real file opens into one, which
+    matters when browsing a folder or batch-processing many simulation
+    files (each `h5py.File(path)` call touches the filesystem).
+    """
+    if isinstance(source, h5py.File):
+        yield source
+    elif isinstance(source, h5py.Group):
+        # Groups don't carry their own `.filename`; every downstream caller
+        # here wants that, so resolve to the parent File instead.
+        yield source.file
+    else:
+        f = h5py.File(source, "r")
+        try:
+            yield f
+        finally:
+            f.close()
 
 
 def _attr(obj, name, default=""):
@@ -111,24 +141,33 @@ class GridFile:
     dataset_name: str = ""
 
     @classmethod
-    def info(cls, filename: str) -> "GridFile":
-        """Read metadata only (no field data) -- fast, for file browsing."""
+    @classmethod
+    def info(cls, filename) -> "GridFile":
+        """Read metadata only (no field data) -- fast, for file browsing.
+
+        `filename` may be a path or an already-open h5py.File/Group (see
+        `open_h5`).
+        """
         return cls._load(filename, read_data=False)
 
     @classmethod
-    def load(cls, filename: str) -> "GridFile":
-        """Read metadata and the field data array."""
+    def load(cls, filename) -> "GridFile":
+        """Read metadata and the field data array.
+
+        `filename` may be a path or an already-open h5py.File/Group (see
+        `open_h5`).
+        """
         return cls._load(filename, read_data=True)
 
     @classmethod
-    def _load(cls, filename: str, read_data: bool) -> "GridFile":
-        gf = cls(filename=filename)
-        with h5py.File(filename, "r") as f:
+    def _load(cls, source, read_data: bool) -> "GridFile":
+        with open_h5(source) as f:
+            gf = cls(filename=f.filename)
             root = f["/"]
 
             dataset_names = [k for k in root.keys() if isinstance(root[k], h5py.Dataset)]
             if not dataset_names:
-                raise ValueError(f"'{filename}' has no datasets")
+                raise ValueError(f"'{gf.filename}' has no datasets")
 
             # In Simulation files there is usually exactly one field dataset whose
             # name matches the physical quantity (e.g. "e1", "charge").
@@ -333,10 +372,13 @@ class GridFile:
         )
 
 
-def is_grid_file(filename: str) -> bool:
-    """Best-effort check for whether an HDF5 file looks like an Simulation grid file."""
+def is_grid_file(filename) -> bool:
+    """Best-effort check for whether a file looks like a Simulation grid file.
+
+    `filename` may be a path or an already-open h5py.File/Group.
+    """
     try:
-        with h5py.File(filename, "r") as f:
+        with open_h5(filename) as f:
             has_dataset = any(isinstance(f[k], h5py.Dataset) for k in f.keys())
             return has_dataset and "AXIS" in f
     except Exception:

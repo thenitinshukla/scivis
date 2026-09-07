@@ -228,6 +228,20 @@ def tab_with_3d_dataset(tmp_path):
     return tab
 
 
+def _make_2d_hdf5_file(tmp_path, n=16, name="blob"):
+    p = tmp_path / f"{name}2d-000000.h5"
+    x = np.linspace(-2, 2, n)
+    X, Y = np.meshgrid(x, x, indexing="ij")
+    data = np.exp(-(X ** 2 + Y ** 2)).astype(np.float32)
+    with h5py.File(p, "w") as f:
+        f.attrs["NAME"] = name; f.attrs["TIME"] = 0.0; f.attrs["ITER"] = 0
+        d = f.create_dataset(name, data=data); d.attrs["UNITS"] = "a.u."
+        g = f.create_group("AXIS")
+        for i in range(2):
+            a = g.create_dataset(f"AXIS{i+1}", data=[-2.0, 2.0]); a.attrs["NAME"] = f"x{i+1}"
+    return str(p)
+
+
 def _actor_count(tab):
     return len(tab.renderer.plotter.renderer.actors)
 
@@ -237,6 +251,48 @@ def test_mode_combo_offers_all_3d_modes(tab_with_3d_dataset):
     options = [tab.mode.itemText(i) for i in range(tab.mode.count())]
     for expected in ("3D orthogonal slices", "3D volume", "3D isosurfaces", "3D clip plane"):
         assert expected in options
+
+
+def test_chosen_mode_survives_reloading_a_file_of_the_same_dimensionality(tab_with_3d_dataset, tmp_path):
+    """Regression test for a real bug: apply_selection() used to force the
+    mode combo back to "3D orthogonal slices" on *every* load, silently
+    discarding an isosurface/threshold/clip-plane choice the moment the
+    user reloaded a file or paged to another frame -- making every mode
+    except orthogonal slices effectively unreachable in practice.
+    """
+    tab = tab_with_3d_dataset
+    tab.mode.setCurrentText("3D isosurfaces")
+    assert tab.mode.currentText() == "3D isosurfaces"
+
+    # Load a second 3D file (same dimensionality) -- the classic
+    # Previous/Next-frame or re-open-file workflow.
+    path2 = _make_3d_hdf5_file(tmp_path, n=16, name="blob2")
+    tab._pending_files = [path2]
+    tab.file_list.clear(); tab.file_list.addItem("blob2-000000.h5"); tab.file_list.setCurrentRow(0)
+    tab.apply_selection()
+
+    assert tab.dataset is not None and tab.dataset.ndim == 3
+    assert tab.mode.currentText() == "3D isosurfaces", (
+        "mode was reset even though the new dataset has the same dimensionality"
+    )
+    # And it must have actually rendered as an isosurface, not silently
+    # fallen back to orthogonal slices while merely leaving the label alone.
+    assert _actor_count(tab) > 0
+
+
+def test_mode_resets_only_when_dimensionality_actually_changes(tab_with_3d_dataset, tmp_path):
+    tab = tab_with_3d_dataset
+    tab.mode.setCurrentText("3D isosurfaces")
+
+    path_2d = _make_2d_hdf5_file(tmp_path, n=16)
+    tab._pending_files = [path_2d]
+    tab.file_list.clear(); tab.file_list.addItem("blob2d-000000.h5"); tab.file_list.setCurrentRow(0)
+    tab.apply_selection()
+
+    assert tab.dataset is not None and tab.dataset.ndim == 2
+    # "3D isosurfaces" is meaningless for a 2D dataset -- this reset is
+    # correct and necessary, unlike the same-dimensionality case above.
+    assert tab.mode.currentText() in ("2D plane", "2D surface", "2D extrusion")
 
 
 def test_gui_volume_mode_renders(tab_with_3d_dataset):

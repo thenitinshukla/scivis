@@ -1,4 +1,4 @@
-<div align="center"> <img src="figures/logo.jpg" alt="SciVis Logo" width="180"/>
+<div align="center"> <img src="figures/logo_1.jpg" alt="SciVis Logo" width="180"/>
 
 
 SciVis: Scientific Simulation Visualization Platform

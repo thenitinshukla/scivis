@@ -5,8 +5,9 @@
     </td>
     <td>
       <h1>SciVis: Scientific Simulation Visualization Platform</h1>
+          A modular Python/PyQt5 desktop application for scientific simulation visualization, data inspection, analysis, machine-learning workflows, and publication-oriented plotting.
+
     </td>
-    A modular Python/PyQt5 desktop application for scientific simulation visualization, data inspection, analysis, machine-learning workflows, and publication-oriented plotting.
   </tr>
 </table>
 

@@ -1,7 +1,7 @@
 <table>
   <tr>
     <td>
-      <img src="figures/logo_1.jpg" alt="SciVis Logo" width="180"/>
+      <img src="figures/logo_1.jpg" alt="SciVis Logo" width="280"/>
     </td>
     <td>
       <h1>SciVis: Scientific Simulation Visualization Platform</h1>

@@ -1,5 +1,6 @@
-<div align="center"> <img src="figures/logo_1.jpg" alt="SciVis Logo" width="180"/>
-
+<div align="left">
+  <img src="figures/logo_1.jpg" alt="SciVis Logo" width="180"/>
+</div>
 
 SciVis: Scientific Simulation Visualization Platform
 

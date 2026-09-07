@@ -12,21 +12,6 @@
 
 </div>
 
-SciVis is designed as a modular scientific-computing environment for exploring, analyzing, and visualizing simulation and experimental data.
-
-The project separates the scientific data-processing and analysis layer from the Qt-based graphical interface, allowing core functionality to be reused independently of the desktop application.
-
-Features
-📊 Scientific data inspection and analysis
-💾 HDF5 simulation workflows
-📈 1D, 2D, and 3D visualization
-🧠 Machine-learning workflows
-⚡ Optional accelerated computational backends
-📑 Publication-oriented plotting
-📁 CSV/TXT numerical data visualization
-🆕 Phase 1 Data Plotter for quickly turning CSV/TXT datasets into figures
-
-
 The project is organized so that scientific data operations can be reused independently of the Qt interface. The application currently supports simulation HDF5 workflows, 1D/2D/3D visualization, analysis tools, optional accelerated backends, and a new Phase 1 **Data Plotter** for quickly turning CSV/TXT numerical data into figures.
 
 ## Project status
